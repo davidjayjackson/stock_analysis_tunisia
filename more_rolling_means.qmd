@@ -1,0 +1,102 @@
+---
+title: "Rolling Means"
+format: html
+editor: visual
+---
+
+## Quarto
+
+Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+
+## Running Code
+
+When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+
+```{r, message=FALSE}
+library(readr)
+library(pracma)
+library(dplyr)
+library(ggplot2)
+library(lubridate)
+```
+
+```{r}
+rm(list=ls())
+stock <- read_csv('./AMENBANK.csv') |> rename(Close = Price) |> arrange(Date)
+stock$Date <- as.Date(stock$Date,format="%m/%d/%Y")
+# Calculate Moving Averages
+stock$roll_100d <- movavg(stock$Close,100,type="e")
+stock$roll_14d <- movavg(stock$Close,14,type="e")
+stock$roll_25d <- movavg(stock$Close,25,type="e")
+# Calculate High/Lo
+stock$highlow <- stock$High - stock$Low
+stock$hl_roll <- movavg(stock$highlow,20)
+```
+
+```{r}
+# Calculate Daily Returns
+stock <- stock %>%
+  arrange(Date) %>%
+  mutate(
+    daily_return = (Close / lag(Close)) - 1
+  )
+
+# Cumulative return is the compound growth of all daily returns up to a given day.
+stock <- stock %>%
+  mutate(
+    cumulative_return = cumprod(1 + coalesce(daily_return, 0)) - 1
+  )
+
+
+```
+
+```{r}
+# Create A first and last monthly close prices
+
+# Read your CSV file
+# (Change "prices.csv" to your actual filename)
+# Make sure your date column is properly parsed as a Date
+
+# Compute first and last close for each month
+monthly_first_last <- stock %>%
+  mutate(month = floor_date(Date, "month")) %>%
+  group_by(month) %>%
+  summarise(
+    first_date = min(Date),
+    first_close = close[which.min(Date)],
+    last_date = max(Date),
+    last_close = close[which.max(Date)],
+    .groups = "drop"
+  )
+
+print(monthly_first_last)
+```
+
+## Plot Close
+
+```{r}
+ggplot(stock) + geom_line(aes(x=Date,y=Close))
+```
+
+## Calculate Rolling Mean
+
+```{r}
+
+stock |> filter(Date >='2024-01-01') |>
+ggplot() + geom_line(aes(x=Date,y=Close,colour="100d")) +
+  geom_line(aes(x=Date,y=roll_100d,colour="Mean"))
+```
+
+```{r}
+
+stock |> filter(Date >='2025-06-01') |>
+  ggplot()+ geom_line(aes(x=Date,y=Close, colour="close")) +
+  geom_line(aes(x=Date,y=roll_25d, colour="25d"))
+
+```
+
+## Cumulative Daily Returns
+
+```{r}
+ggplot(stock) + geom_line(aes(x=Date,y=cumulative_return))
+```

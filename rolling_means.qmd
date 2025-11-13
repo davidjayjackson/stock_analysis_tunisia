@@ -1,0 +1,27 @@
+---
+title: "Rolling Mean For Stock Analysis"
+format: html
+editor: visual
+---
+
+## Laod libraries
+
+
+```{r, message=FALSE}
+library(zoo)
+```
+
+## Load Data and Clean Dates
+
+```{r}
+rm(list=ls())
+appl <- read.csv('./apple.csv')
+appl$Date <- as.Date(appl$Date,format="%d/%m/%Y")
+summary(appl)
+```
+
+## Basic Line Plot
+
+```{r}
+plot(appl$Date,appl$Close,type='l')
+```
